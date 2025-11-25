@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minimalist Maintenance Calorie Calculator</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f7f9fc; /* Very light, soft background */
+        }
+        /* Custom scrollbar for aesthetic feel */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #d1d5db; /* Light gray */
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen p-4">
+
+    <!-- Calculator Card -->
+    <div class="w-full max-w-md bg-white p-8 md:p-10 rounded-xl shadow-2xl transition-all duration-300 hover:shadow-3xl border border-gray-100">
+        
+        <h1 class="text-3xl font-light text-gray-800 mb-2 text-center">TDEE Calculator</h1>
+        <p class="text-sm text-gray-500 mb-8 text-center">Mifflin-St Jeor formula </p>
+
+        <!-- Input Form -->
+        <div class="space-y-6">
+
+            <!-- Gender Selector -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Gender</label>
+                <div class="flex space-x-4 p-1 bg-gray-50 rounded-lg">
+                    <button id="gender-male" onclick="setGender('male')" class="flex-1 py-2 text-center rounded-lg text-sm font-medium transition-all duration-200 bg-teal-500 text-white shadow-md">Male</button>
+                    <button id="gender-female" onclick="setGender('female')" class="flex-1 py-2 text-center rounded-lg text-sm font-medium text-gray-600 hover:bg-white">Female</button>
+                </div>
+                <input type="hidden" id="gender" value="male">
+            </div>
+
+            <!-- Weight (kg) -->
+            <div>
+                <label for="weight" class="block text-sm font-medium text-gray-700 mb-2">Weight (kg)</label>
+                <input type="number" id="weight" min="1" placeholder="Enter weight in kilograms" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-teal-500 focus:border-teal-500 transition duration-150" required>
+            </div>
+
+            <!-- Height (cm) -->
+            <div>
+                <label for="height" class="block text-sm font-medium text-gray-700 mb-2">Height (cm)</label>
+                <input type="number" id="height" min="1" placeholder="Enter height in centimeters" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-teal-500 focus:border-teal-500 transition duration-150" required>
+            </div>
+
+            <!-- Age (years) -->
+            <div>
+                <label for="age" class="block text-sm font-medium text-gray-700 mb-2">Age (years)</label>
+                <input type="number" id="age" min="1" max="120" placeholder="Enter age" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-teal-500 focus:border-teal-500 transition duration-150" required>
+            </div>
+
+            <!-- Activity Level -->
+            <div>
+                <label for="activity" class="block text-sm font-medium text-gray-700 mb-2">Activity Level</label>
+                <select id="activity" class="w-full px-4 py-3 border border-gray-200 rounded-xl bg-white appearance-none focus:ring-teal-500 focus:border-teal-500 transition duration-150">
+                    <option value="1.2">1. Sedentary (No exercise, mostly sitting)</option>
+                    <option value="1.375">2. Lightly active (2–3 light workouts/week)</option>
+                    <option value="1.55" selected>3. Moderately active (3–5 workouts/week)</option>
+                    <option value="1.725">4. Very active (Intense training, manual job)</option>
+                    <option value="1.9">5. Super active (Athlete-level training)</option>
+                </select>
+            </div>
+
+            <!-- Calculate Button -->
+            <button onclick="calculateTDEE()" class="w-full py-3 bg-teal-600 text-white rounded-xl font-semibold shadow-lg hover:bg-teal-700 transition duration-200 ease-in-out transform hover:scale-[1.01] focus:outline-none focus:ring-4 focus:ring-teal-300">
+                Calculate Maintenance Calories
+            </button>
+        </div>
+
+        <!-- Result Section -->
+        <div id="result-container" class="mt-8 pt-6 border-t border-gray-100 hidden">
+            <h2 class="text-xl font-medium text-gray-700 mb-4 text-center">Your Results</h2>
+            
+            <div class="flex flex-col space-y-4">
+                
+                <!-- BMR Result -->
+                <div class="bg-gray-50 p-4 rounded-xl border border-gray-200 flex justify-between items-center shadow-inner">
+                    <span class="text-sm text-gray-600">Basal Metabolic Rate (BMR)</span>
+                    <span id="bmr-result" class="text-lg font-bold text-blue-600">0 kcal</span>
+                </div>
+
+                <!-- TDEE Result (Maintenance) -->
+                <div class="bg-teal-50 p-4 rounded-xl border border-teal-200 flex justify-between items-center shadow-md">
+                    <span class="text-lg font-medium text-teal-800">Maintenance Calories (TDEE)</span>
+                    <span id="tdee-result" class="text-2xl font-extrabold text-teal-700">0 kcal</span>
+                </div>
+
+            </div>
+        </div>
+        
+        <!-- Error Message -->
+        <p id="error-message" class="mt-4 text-center text-sm text-red-500 hidden">Please fill in all fields with valid numbers.</p>
+
+    </div>
+
+    <script>
+        // Global utility functions for calculation
+        const ACTIVITY_FACTORS = {
+            'Sedentary': 1.2,
+            'Lightly active': 1.375,
+            'Moderately active': 1.55,
+            'Very active': 1.725,
+            'Super active': 1.9
+        };
+
+        function setGender(gender) {
+            const maleBtn = document.getElementById('gender-male');
+            const femaleBtn = document.getElementById('gender-female');
+            const genderInput = document.getElementById('gender');
+
+            if (gender === 'male') {
+                genderInput.value = 'male';
+                maleBtn.classList.remove('bg-white', 'text-gray-600', 'hover:bg-white');
+                maleBtn.classList.add('bg-teal-500', 'text-white', 'shadow-md');
+                femaleBtn.classList.remove('bg-teal-500', 'text-white', 'shadow-md');
+                femaleBtn.classList.add('bg-white', 'text-gray-600', 'hover:bg-white');
+            } else {
+                genderInput.value = 'female';
+                femaleBtn.classList.remove('bg-white', 'text-gray-600', 'hover:bg-white');
+                femaleBtn.classList.add('bg-teal-500', 'text-white', 'shadow-md');
+                maleBtn.classList.remove('bg-teal-500', 'text-white', 'shadow-md');
+                maleBtn.classList.add('bg-white', 'text-gray-600', 'hover:bg-white');
+            }
+            // Trigger calculation on gender change if other fields are filled
+            // calculateTDEE();
+        }
+
+        // Set initial state for aesthetic
+        document.addEventListener('DOMContentLoaded', () => {
+            setGender('male'); // Default to Male on load
+        });
+
+
+        /**
+         * Calculates Basal Metabolic Rate (BMR) using the Mifflin-St Jeor formula.
+         * @param {number} weightKg - Weight in kilograms.
+         * @param {number} heightCm - Height in centimeters.
+         * @param {number} age - Age in years.
+         * @param {string} gender - 'male' or 'female'.
+         * @returns {number} The calculated BMR.
+         */
+        function calculateBMR(weightKg, heightCm, age, gender) {
+            let bmr = 0;
+            // BMR = 10 * W(kg) + 6.25 * H(cm) - 5 * A + S
+            
+            const base = (10 * weightKg) + (6.25 * heightCm) - (5 * age);
+
+            if (gender === 'male') {
+                // S = +5 for Men: BMR = 10 * W + 6.25 * H - 5 * A + 5
+                bmr = base + 5;
+            } else if (gender === 'female') {
+                // S = -161 for Women: BMR = 10 * W + 6.25 * H - 5 * A - 161
+                bmr = base - 161;
+            }
+            return bmr;
+        }
+
+        /**
+         * Calculates Total Daily Energy Expenditure (TDEE) or Maintenance Calories.
+         * @param {number} bmr - Basal Metabolic Rate.
+         * @param {number} activityFactor - The multiplier based on activity level.
+         * @returns {number} The calculated TDEE.
+         */
+        function calculateTDEE() {
+            // 1. Get Input Values
+            const weight = parseFloat(document.getElementById('weight').value);
+            const height = parseFloat(document.getElementById('height').value);
+            const age = parseFloat(document.getElementById('age').value);
+            const gender = document.getElementById('gender').value;
+            const activityFactor = parseFloat(document.getElementById('activity').value);
+            
+            const errorElement = document.getElementById('error-message');
+            const resultContainer = document.getElementById('result-container');
+
+            // 2. Validation
+            if (isNaN(weight) || isNaN(height) || isNaN(age) || weight <= 0 || height <= 0 || age <= 0) {
+                errorElement.classList.remove('hidden');
+                resultContainer.classList.add('hidden');
+                return;
+            }
+            
+            errorElement.classList.add('hidden');
+
+            // 3. Calculation (Step 1: BMR)
+            const bmr = calculateBMR(weight, height, age, gender);
+
+            // 4. Calculation (Step 2: TDEE)
+            const tdee = bmr * activityFactor;
+            
+            // 5. Display Results
+            const bmrResultElement = document.getElementById('bmr-result');
+            const tdeeResultElement = document.getElementById('tdee-result');
+            
+            // Use Math.round for clean whole numbers
+            bmrResultElement.textContent = `${Math.round(bmr)} kcal`;
+            tdeeResultElement.textContent = `${Math.round(tdee)} kcal`;
+            
+            resultContainer.classList.remove('hidden');
+        }
+    </script>
+</body>
+</html>
