@@ -3,117 +3,273 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Minimalist Maintenance Calorie Calculator</title>
-    <!-- Load Tailwind CSS -->
+    <title>TDEE Calculator | Ever Lean</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@400;500;600&family=Playfair+Display:ital,wght@0,500;1,500&display=swap" rel="stylesheet">
     <style>
-        body {
+        :root {
+            --primary: #2A241B;
+            --secondary: #8A9B69; /* Sage green from Ever Lean */
+            --accent: #C97D5E;
+            --background: #F9F5F0;
+            --body-opacity: 0.88;
+            --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+            --animation-duration: 2.8s;
+        }
+
+        /* TYPOGRAPHY SYSTEM */
+        h1, h2, h3, .metric-font {
+            font-family: 'Cormorant Garamond', serif;
+            letter-spacing: -0.5px;
+            line-height: 1.2;
+            color: var(--primary);
+        }
+        body, button, input, select {
             font-family: 'Inter', sans-serif;
-            background-color: #f7f9fc; /* Very light, soft background */
+            line-height: 1.6;
+            color: rgba(42, 36, 27, var(--body-opacity));
         }
-        /* Custom scrollbar for aesthetic feel */
-        ::-webkit-scrollbar {
-            width: 8px;
+
+        /* PRELOADER STYLES */
+        #preloader {
+            position: fixed;
+            inset: 0;
+            z-index: 100;
+            background-color: var(--background);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: opacity 1s var(--ease-standard), visibility 1s;
         }
-        ::-webkit-scrollbar-thumb {
-            background: #d1d5db; /* Light gray */
-            border-radius: 4px;
+
+        .preloader-hidden {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+        }
+
+        .infinity {
+            fill: none;
+            stroke: var(--secondary);
+            stroke-width: 8;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            stroke-dasharray: 1200;
+            stroke-dashoffset: 1200;
+            animation: drawStroke var(--animation-duration) var(--ease-standard) forwards;
+        }
+
+        .brand-text-anim {
+            font-family: 'Playfair Display', serif;
+            font-size: 82px;
+            font-weight: 500;
+            fill: var(--primary);
+            opacity: 0;
+            text-anchor: middle;
+            dominant-baseline: middle;
+            animation: fadeInText 1.5s ease-out 0.8s forwards;
+        }
+
+        /* BACKGROUND GRAIN */
+        .grain {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            opacity: 0.04;
+            pointer-events: none;
+            z-index: 1;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+        }
+
+        /* MAIN CONTENT ANIMATION */
+        #main-content {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: all 1.2s var(--ease-standard);
+        }
+
+        .content-visible {
+            opacity: 1 !important;
+            transform: translateY(0) !important;
+        }
+
+        /* PREMIUM UI COMPONENTS */
+        .btn-artisan {
+            position: relative;
+            overflow: hidden;
+            transition: all 300ms var(--ease-standard);
+            border-radius: 6px;
+            background: var(--secondary);
+            color: white;
+            box-shadow: 0 4px 14px rgba(138, 155, 105, 0.3);
+        }
+        .btn-artisan:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(138, 155, 105, 0.4);
+            filter: brightness(1.05);
+        }
+
+        .input-artisan {
+            border: 1px solid rgba(42, 36, 27, 0.1);
+            border-radius: 6px;
+            background: white;
+            transition: all 300ms var(--ease-standard);
+        }
+        .input-artisan:focus {
+            outline: none;
+            border-color: var(--secondary);
+            box-shadow: 0 0 0 4px rgba(138, 155, 105, 0.1);
+            transform: translateX(4px);
+        }
+
+        .card-artisan {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 50px rgba(42, 36, 27, 0.04);
+            border: 1px solid rgba(42, 36, 27, 0.03);
+        }
+
+        .gender-btn.active {
+            background: var(--secondary);
+            color: white;
+            box-shadow: 0 4px 10px rgba(138, 155, 105, 0.2);
+        }
+
+        @keyframes drawStroke {
+            to { stroke-dashoffset: 0; }
+        }
+
+        @keyframes fadeInText {
+            0% { opacity: 0; transform: scale(0.95); }
+            100% { opacity: 1; transform: scale(1); }
+        }
+
+        @keyframes countUp {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .metric-update {
+            animation: countUp 400ms var(--ease-standard);
         }
     </style>
 </head>
-<body class="flex items-center justify-center min-h-screen p-4">
+<body class="bg-[#F9F5F0] min-h-screen flex items-center justify-center p-6 overflow-x-hidden">
 
-    <!-- Calculator Card -->
-    <div class="w-full max-w-md bg-white p-8 md:p-10 rounded-xl shadow-2xl transition-all duration-300 hover:shadow-3xl border border-gray-100">
-        
-        <h1 class="text-3xl font-light text-gray-800 mb-2 text-center">TDEE Calculator</h1>
-        <p class="text-sm text-gray-500 mb-8 text-center">Mifflin-St Jeor formula </p>
+    <div class="grain"></div>
 
-        <!-- Input Form -->
-        <div class="space-y-6">
+    <!-- 1. PRELOADER -->
+    <div id="preloader">
+        <svg viewBox="0 0 800 450" class="w-full max-w-2xl h-auto">
+            <path class="infinity" d="M400,225 
+                     C500,140 650,140 650,225 
+                     C650,310 500,310 400,225 
+                     C300,140 150,140 150,225 
+                     C150,310 300,310 400,225" />
+            <text x="400" y="235" class="brand-text-anim">Ever Lean</text>
+        </svg>
+    </div>
 
-            <!-- Gender Selector -->
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">Gender</label>
-                <div class="flex space-x-4 p-1 bg-gray-50 rounded-lg">
-                    <button id="gender-male" onclick="setGender('male')" class="flex-1 py-2 text-center rounded-lg text-sm font-medium transition-all duration-200 bg-teal-500 text-white shadow-md">Male</button>
-                    <button id="gender-female" onclick="setGender('female')" class="flex-1 py-2 text-center rounded-lg text-sm font-medium text-gray-600 hover:bg-white">Female</button>
-                </div>
-                <input type="hidden" id="gender" value="male">
-            </div>
-
-            <!-- Weight (kg) -->
-            <div>
-                <label for="weight" class="block text-sm font-medium text-gray-700 mb-2">Weight (kg)</label>
-                <input type="number" id="weight" min="1" placeholder="Enter weight in kilograms" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-teal-500 focus:border-teal-500 transition duration-150" required>
-            </div>
-
-            <!-- Height (cm) -->
-            <div>
-                <label for="height" class="block text-sm font-medium text-gray-700 mb-2">Height (cm)</label>
-                <input type="number" id="height" min="1" placeholder="Enter height in centimeters" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-teal-500 focus:border-teal-500 transition duration-150" required>
-            </div>
-
-            <!-- Age (years) -->
-            <div>
-                <label for="age" class="block text-sm font-medium text-gray-700 mb-2">Age (years)</label>
-                <input type="number" id="age" min="1" max="120" placeholder="Enter age" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-teal-500 focus:border-teal-500 transition duration-150" required>
-            </div>
-
-            <!-- Activity Level -->
-            <div>
-                <label for="activity" class="block text-sm font-medium text-gray-700 mb-2">Activity Level</label>
-                <select id="activity" class="w-full px-4 py-3 border border-gray-200 rounded-xl bg-white appearance-none focus:ring-teal-500 focus:border-teal-500 transition duration-150">
-                    <option value="1.2">1. Sedentary (No exercise, mostly sitting)</option>
-                    <option value="1.375">2. Lightly active (2–3 light workouts/week)</option>
-                    <option value="1.55" selected>3. Moderately active (3–5 workouts/week)</option>
-                    <option value="1.725">4. Very active (Intense training, manual job)</option>
-                    <option value="1.9">5. Super active (Athlete-level training)</option>
-                </select>
-            </div>
-
-            <!-- Calculate Button -->
-            <button onclick="calculateTDEE()" class="w-full py-3 bg-teal-600 text-white rounded-xl font-semibold shadow-lg hover:bg-teal-700 transition duration-200 ease-in-out transform hover:scale-[1.01] focus:outline-none focus:ring-4 focus:ring-teal-300">
-                Calculate Maintenance Calories
-            </button>
-        </div>
-
-        <!-- Result Section -->
-        <div id="result-container" class="mt-8 pt-6 border-t border-gray-100 hidden">
-            <h2 class="text-xl font-medium text-gray-700 mb-4 text-center">Your Results</h2>
+    <!-- 2. MAIN CALCULATOR -->
+    <div id="main-content" class="w-full max-w-xl relative z-10">
+        <div class="card-artisan p-8 md:p-12">
             
-            <div class="flex flex-col space-y-4">
-                
-                <!-- BMR Result -->
-                <div class="bg-gray-50 p-4 rounded-xl border border-gray-200 flex justify-between items-center shadow-inner">
-                    <span class="text-sm text-gray-600">Basal Metabolic Rate (BMR)</span>
-                    <span id="bmr-result" class="text-lg font-bold text-blue-600">0 kcal</span>
-                </div>
-
-                <!-- TDEE Result (Maintenance) -->
-                <div class="bg-teal-50 p-4 rounded-xl border border-teal-200 flex justify-between items-center shadow-md">
-                    <span class="text-lg font-medium text-teal-800">Maintenance Calories (TDEE)</span>
-                    <span id="tdee-result" class="text-2xl font-extrabold text-teal-700">0 kcal</span>
-                </div>
-
+            <div class="text-center mb-12">
+                <h1 class="text-4xl md:text-5xl font-bold mb-3">TDEE Calculator</h1>
+                <p class="text-gray-400 italic font-medium tracking-wide">Physiological Precision by Ever Lean</p>
             </div>
+
+            <!-- Form -->
+            <div class="space-y-10">
+                <!-- Gender -->
+                <div>
+                    <label class="block text-[10px] uppercase tracking-[0.2em] font-bold text-gray-400 mb-4">Biological Gender</label>
+                    <div class="flex space-x-3 p-1.5 bg-gray-50 rounded-xl border border-gray-100">
+                        <button id="gender-male" onclick="setGender('male')" class="gender-btn flex-1 py-3 text-center rounded-lg text-sm font-semibold transition-all active">Male</button>
+                        <button id="gender-female" onclick="setGender('female')" class="gender-btn flex-1 py-3 text-center rounded-lg text-sm font-semibold transition-all text-gray-400">Female</button>
+                    </div>
+                    <input type="hidden" id="gender" value="male">
+                </div>
+
+                <!-- Metrics Grid -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div>
+                        <label for="weight" class="block text-[10px] uppercase tracking-[0.2em] font-bold text-gray-400 mb-3">Weight (kg)</label>
+                        <input type="number" id="weight" placeholder="70" class="input-artisan w-full px-5 py-4 text-lg">
+                    </div>
+                    <div>
+                        <label for="height" class="block text-[10px] uppercase tracking-[0.2em] font-bold text-gray-400 mb-3">Height (cm)</label>
+                        <input type="number" id="height" placeholder="175" class="input-artisan w-full px-5 py-4 text-lg">
+                    </div>
+                </div>
+
+                <!-- Age -->
+                <div>
+                    <label for="age" class="block text-[10px] uppercase tracking-[0.2em] font-bold text-gray-400 mb-3">Age (years)</label>
+                    <input type="number" id="age" placeholder="28" class="input-artisan w-full px-5 py-4 text-lg">
+                </div>
+
+                <!-- Activity -->
+                <div>
+                    <label for="activity" class="block text-[10px] uppercase tracking-[0.2em] font-bold text-gray-400 mb-3">Activity Architecture</label>
+                    <div class="relative">
+                        <select id="activity" class="input-artisan w-full px-5 py-4 text-md bg-white appearance-none cursor-pointer">
+                            <option value="1.2">Sedentary (Minimum movement)</option>
+                            <option value="1.375">Lightly Active (1-2 days/week)</option>
+                            <option value="1.55" selected>Moderately Active (3-5 days/week)</option>
+                            <option value="1.725">Very Active (6-7 days/week)</option>
+                            <option value="1.9">Elite (Professional training)</option>
+                        </select>
+                        <div class="absolute right-5 top-1/2 -translate-y-1/2 pointer-events-none text-gray-300">
+                            <svg width="12" height="8" viewBox="0 0 12 8" fill="none"><path d="M1 1L6 6L11 1" stroke="currentColor" stroke-width="2"/></svg>
+                        </div>
+                    </div>
+                </div>
+
+                <button onclick="calculateTDEE()" class="btn-artisan w-full py-5 text-lg font-bold tracking-widest mt-4">
+                    CALCULATE EXPENDITURE
+                </button>
+            </div>
+
+            <!-- Results -->
+            <div id="result-container" class="mt-16 pt-12 border-t border-gray-50 hidden">
+                <div class="space-y-6">
+                    <div class="flex justify-between items-center px-2">
+                        <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Basal Metabolic Rate</span>
+                        <span id="bmr-result" class="text-2xl font-bold metric-font">0 kcal</span>
+                    </div>
+
+                    <div class="bg-[#F4F1EC] p-10 rounded-2xl border-l-8 border-[#8A9B69] shadow-sm flex flex-col md:flex-row justify-between items-center gap-4">
+                        <div>
+                            <h3 class="text-xs font-black text-[#8A9B69] uppercase tracking-[0.3em] mb-1">Maintenance Target</h3>
+                            <p class="text-sm text-gray-500 italic">Recommended daily caloric intake</p>
+                        </div>
+                        <span id="tdee-result" class="text-5xl font-bold metric-font text-[#2A241B]">0 kcal</span>
+                    </div>
+                </div>
+            </div>
+
+            <p id="error-message" class="mt-8 text-center text-sm text-[#C97D5E] font-semibold hidden tracking-wide">Invalid physiological input detected.</p>
         </div>
         
-        <!-- Error Message -->
-        <p id="error-message" class="mt-4 text-center text-sm text-red-500 hidden">Please fill in all fields with valid numbers.</p>
-
+        <footer class="mt-12 text-center text-[10px] text-gray-400 uppercase tracking-[0.4em] font-bold">
+            &copy; 2025 Ever Lean Physiology
+        </footer>
     </div>
 
     <script>
-        // Global utility functions for calculation
-        const ACTIVITY_FACTORS = {
-            'Sedentary': 1.2,
-            'Lightly active': 1.375,
-            'Moderately active': 1.55,
-            'Very active': 1.725,
-            'Super active': 1.9
-        };
+        // Preloader Logic
+        window.addEventListener('load', () => {
+            const preloader = document.getElementById('preloader');
+            const mainContent = document.getElementById('main-content');
+            
+            // Allow animation to finish (approx 3.5s for a premium feel)
+            setTimeout(() => {
+                preloader.classList.add('preloader-hidden');
+                setTimeout(() => {
+                    mainContent.classList.add('content-visible');
+                }, 300);
+            }, 3800);
+        });
 
         function setGender(gender) {
             const maleBtn = document.getElementById('gender-male');
@@ -122,59 +278,20 @@
 
             if (gender === 'male') {
                 genderInput.value = 'male';
-                maleBtn.classList.remove('bg-white', 'text-gray-600', 'hover:bg-white');
-                maleBtn.classList.add('bg-teal-500', 'text-white', 'shadow-md');
-                femaleBtn.classList.remove('bg-teal-500', 'text-white', 'shadow-md');
-                femaleBtn.classList.add('bg-white', 'text-gray-600', 'hover:bg-white');
+                maleBtn.classList.add('active');
+                maleBtn.classList.remove('text-gray-400');
+                femaleBtn.classList.remove('active');
+                femaleBtn.classList.add('text-gray-400');
             } else {
                 genderInput.value = 'female';
-                femaleBtn.classList.remove('bg-white', 'text-gray-600', 'hover:bg-white');
-                femaleBtn.classList.add('bg-teal-500', 'text-white', 'shadow-md');
-                maleBtn.classList.remove('bg-teal-500', 'text-white', 'shadow-md');
-                maleBtn.classList.add('bg-white', 'text-gray-600', 'hover:bg-white');
+                femaleBtn.classList.add('active');
+                femaleBtn.classList.remove('text-gray-400');
+                maleBtn.classList.remove('active');
+                maleBtn.classList.add('text-gray-400');
             }
-            // Trigger calculation on gender change if other fields are filled
-            // calculateTDEE();
         }
 
-        // Set initial state for aesthetic
-        document.addEventListener('DOMContentLoaded', () => {
-            setGender('male'); // Default to Male on load
-        });
-
-
-        /**
-         * Calculates Basal Metabolic Rate (BMR) using the Mifflin-St Jeor formula.
-         * @param {number} weightKg - Weight in kilograms.
-         * @param {number} heightCm - Height in centimeters.
-         * @param {number} age - Age in years.
-         * @param {string} gender - 'male' or 'female'.
-         * @returns {number} The calculated BMR.
-         */
-        function calculateBMR(weightKg, heightCm, age, gender) {
-            let bmr = 0;
-            // BMR = 10 * W(kg) + 6.25 * H(cm) - 5 * A + S
-            
-            const base = (10 * weightKg) + (6.25 * heightCm) - (5 * age);
-
-            if (gender === 'male') {
-                // S = +5 for Men: BMR = 10 * W + 6.25 * H - 5 * A + 5
-                bmr = base + 5;
-            } else if (gender === 'female') {
-                // S = -161 for Women: BMR = 10 * W + 6.25 * H - 5 * A - 161
-                bmr = base - 161;
-            }
-            return bmr;
-        }
-
-        /**
-         * Calculates Total Daily Energy Expenditure (TDEE) or Maintenance Calories.
-         * @param {number} bmr - Basal Metabolic Rate.
-         * @param {number} activityFactor - The multiplier based on activity level.
-         * @returns {number} The calculated TDEE.
-         */
         function calculateTDEE() {
-            // 1. Get Input Values
             const weight = parseFloat(document.getElementById('weight').value);
             const height = parseFloat(document.getElementById('height').value);
             const age = parseFloat(document.getElementById('age').value);
@@ -184,30 +301,33 @@
             const errorElement = document.getElementById('error-message');
             const resultContainer = document.getElementById('result-container');
 
-            // 2. Validation
-            if (isNaN(weight) || isNaN(height) || isNaN(age) || weight <= 0 || height <= 0 || age <= 0) {
+            if (!weight || !height || !age || weight <= 0 || height <= 0 || age <= 0) {
                 errorElement.classList.remove('hidden');
                 resultContainer.classList.add('hidden');
                 return;
             }
             
             errorElement.classList.add('hidden');
-
-            // 3. Calculation (Step 1: BMR)
-            const bmr = calculateBMR(weight, height, age, gender);
-
-            // 4. Calculation (Step 2: TDEE)
+            
+            // Mifflin-St Jeor
+            const base = (10 * weight) + (6.25 * height) - (5 * age);
+            const bmr = gender === 'male' ? base + 5 : base - 161;
             const tdee = bmr * activityFactor;
             
-            // 5. Display Results
-            const bmrResultElement = document.getElementById('bmr-result');
-            const tdeeResultElement = document.getElementById('tdee-result');
+            const bmrRes = document.getElementById('bmr-result');
+            const tdeeRes = document.getElementById('tdee-result');
             
-            // Use Math.round for clean whole numbers
-            bmrResultElement.textContent = `${Math.round(bmr)} kcal`;
-            tdeeResultElement.textContent = `${Math.round(tdee)} kcal`;
+            bmrRes.textContent = `${Math.round(bmr)} kcal`;
+            tdeeRes.textContent = `${Math.round(tdee)} kcal`;
             
+            bmrRes.classList.remove('metric-update');
+            tdeeRes.classList.remove('metric-update');
+            void bmrRes.offsetWidth; 
+            bmrRes.classList.add('metric-update');
+            tdeeRes.classList.add('metric-update');
+
             resultContainer.classList.remove('hidden');
+            resultContainer.scrollIntoView({ behavior: 'smooth', block: 'end' });
         }
     </script>
 </body>
